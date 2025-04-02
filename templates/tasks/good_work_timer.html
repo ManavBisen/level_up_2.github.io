@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}Good Work Timer{% endblock %}
+
+{% block extra_css %}
+<style>
+    #timer-display {
+        font-family: 'Courier New', monospace;
+        font-size: 4rem;
+        letter-spacing: 2px;
+    }
+    
+    .timer-card {
+        transition: all 0.3s ease;
+    }
+    
+    .timer-active {
+        border-color: #198754;
+        box-shadow: 0 0 15px rgba(25, 135, 84, 0.5);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow mb-4 timer-card {% if active_session %}timer-active{% endif %}" id="timer-card">
+            <div class="card-header {% if active_session %}bg-success{% else %}bg-primary{% endif %} text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-stopwatch me-2"></i> 
+                    <span id="timer-status">{% if active_session %}Timer Running{% else %}Good Work Timer{% endif %}</span>
+                </h3>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <div id="timer-display" class="display-1 fw-bold mb-3">
+                        {% if active_session %}
+                            <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
+                        {% else %}
+                            00:00:00
+                        {% endif %}
+                    </div>
+                    <p class="lead" id="timer-message">
+                        {% if active_session %}
+                            Timer started at {{ active_session.start_time|time:"H:i:s" }}
+                        {% else %}
+                            Start the timer to begin tracking your Good Work time
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="mb-4">
+                    <p>Remember: <strong>1 minute = 1 XP</strong></p>
+                    <p>Complete 40 minutes to fulfill your daily Good Work task!</p>
+                </div>
+                
+                <div class="d-grid gap-2 col-md-6 mx-auto">
+                    {% if active_session %}
+                        <button id="stop-timer" class="btn btn-danger btn-lg">
+                            <i class="fas fa-stop-circle me-2"></i> Stop Timer
+                        </button>
+                        <input type="hidden" id="session-id" value="{{ active_session.id }}">
+                        <input type="hidden" id="start-time" value="{{ active_session.start_time|date:'c' }}">
+                    {% else %}
+                        <button id="start-timer" class="btn btn-success btn-lg">
+                            <i class="fas fa-play-circle me-2"></i> Start Timer
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0"><i class="fas fa-history me-2"></i> Today's Sessions</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h5>Total Time Today: <span class="badge bg-success">{{ total_today_minutes }} minutes</span></h5>
+                    <h5>Total XP Earned Today: <span class="badge bg-primary">{{ total_today_minutes }} XP</span></h5>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Duration</th>
+                                <th>XP Earned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in today_sessions %}
+                                <tr>
+                                    <td>{{ session.start_time|time:"H:i:s" }}</td>
+                                    <td>
+                                        {% if session.end_time %}
+                                            {{ session.end_time|time:"H:i:s" }}
+                                        {% else %}
+                                            <span class="badge bg-warning">Running</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if session.end_time %}
+                                            {{ session.duration_minutes }} minutes
+                                        {% else %}
+                                            <span class="badge bg-warning">In progress</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if session.end_time %}
+                                            {{ session.xp_earned }} XP
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">No sessions recorded today</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/timer.js"></script>
+{% endblock %}

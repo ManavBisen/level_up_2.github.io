@@ -1,161 +1,150 @@
 from django.db import models
 from django.contrib.auth.models import User
-from PIL import Image
 from django.utils import timezone
+from PIL import Image
 from datetime import timedelta
 import os
 
-
-class Title(models.Model):
-    name = models.CharField(max_length=100)
-    required_level = models.PositiveIntegerField()
-    description = models.TextField(blank=True)
-
+class LevelTitle(models.Model):
+    level = models.IntegerField(unique=True)
+    title = models.CharField(max_length=100)
+    
     def __str__(self):
-        return f"{self.name} (Level {self.required_level})"
-
-
-class UserLevel(models.Model):
-    level = models.PositiveIntegerField(unique=True)
-    xp_required = models.PositiveIntegerField()
-
-    def __str__(self):
-        return f"Level {self.level} - {self.xp_required} XP required"
-
-    @classmethod
-    def get_xp_required(cls, level):
-        """
-        Calculate XP required to reach the next level.
-        Level 0 -> 1: 10 XP
-        Level 1 -> 2: 11 XP
-        ...
-        After level 50, fixed at 60 XP
-        """
-        try:
-            level_obj = cls.objects.get(level=level)
-            return level_obj.xp_required
-        except cls.DoesNotExist:
-            if level < 50:
-                return 10 + level
-            else:
-                return 60
-
+        return f"Level {self.level}: {self.title}"
+    
+    class Meta:
+        ordering = ['level']
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     image = models.ImageField(default='default.jpg', upload_to='profile_pics')
-    level = models.PositiveIntegerField(default=0)
-    total_xp = models.PositiveIntegerField(default=0)
-    current_xp = models.PositiveIntegerField(default=0)
-    title = models.ForeignKey(Title, on_delete=models.SET_NULL, null=True, blank=True)
-    password = models.CharField(max_length=100, blank=True)  # For XP transactions
-
+    level = models.IntegerField(default=0)
+    xp = models.IntegerField(default=0)  # Current XP towards next level
+    total_xp = models.IntegerField(default=0)  # Total XP accumulated
+    title = models.CharField(max_length=100, default='None')
+    
     def __str__(self):
-        return f"{self.user.username}'s Profile"
-
+        return f"{self.user.username} Profile"
+    
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-
+        
+        # Resize image if needed
         img = Image.open(self.image.path)
         if img.height > 300 or img.width > 300:
             output_size = (300, 300)
             img.thumbnail(output_size)
             img.save(self.image.path)
-
+    
+    def get_xp_for_next_level(self):
+        # Calculate XP needed to level up (10 + level, max 60)
+        return min(10 + self.level, 60)
+    
     def add_xp(self, amount):
-        """Add XP and handle level up logic"""
-        self.total_xp += amount
-        self.current_xp += amount
-
-        # Check if user leveled up
-        xp_required = UserLevel.get_xp_required(self.level)
+        """Add XP to the user and handle level-ups"""
+        if amount <= 0:
+            return
         
-        while self.current_xp >= xp_required:
-            self.current_xp -= xp_required
+        self.xp += amount
+        self.total_xp += amount
+        
+        # Check for level up
+        while self.xp >= self.get_xp_for_next_level():
+            self.xp -= self.get_xp_for_next_level()
             self.level += 1
             
-            # Check for title update
-            self.update_title()
+            # Update title based on level
+            self._update_title()
             
-            # Get XP required for next level
-            xp_required = UserLevel.get_xp_required(self.level)
+            # Create notification for level up
+            Notification.objects.create(
+                user=self.user,
+                message=f"Congratulations! You've reached level {self.level}!"
+            )
         
         self.save()
-        return self.level
-
-    def subtract_xp(self, amount):
-        """Subtract XP and handle level down logic if needed"""
-        # Ensure we don't go below 0 total XP
+    
+    def _update_title(self):
+        """Update the user's title based on their level"""
+        # Try to find a title for the current level
+        try:
+            level_title = LevelTitle.objects.filter(level__lte=self.level).order_by('-level').first()
+            if level_title:
+                self.title = level_title.title
+        except LevelTitle.DoesNotExist:
+            # If no title found, use default titles
+            if self.level == 0:
+                self.title = 'None'
+            elif self.level == 1:
+                self.title = 'Beginner'
+            elif self.level >= 5 and self.level < 10:
+                self.title = 'Player'
+            elif self.level >= 10 and self.level < 20:
+                self.title = 'Bounty 1Thousand'
+            elif self.level >= 20:
+                self.title = 'Bounty 100Thousand'
+    
+    def remove_xp(self, amount):
+        """Remove XP (for punishments)"""
+        if amount <= 0:
+            return
+        
+        # Can't go below 0 total XP
         amount = min(amount, self.total_xp)
         
         self.total_xp -= amount
         
-        # Adjust current XP and level
-        previous_level = self.level
-        self.current_xp -= amount
-        
-        while self.current_xp < 0 and self.level > 0:
+        # Check if we need to drop levels
+        while self.xp < 0:
+            if self.level <= 0:
+                # Can't go below level 0
+                self.xp = 0
+                break
+                
+            # Drop a level
             self.level -= 1
-            xp_required = UserLevel.get_xp_required(self.level)
-            self.current_xp += xp_required
+            self.xp += self.get_xp_for_next_level()
+            self._update_title()
             
-        # If level went below 0, reset to 0
-        if self.current_xp < 0:
-            self.current_xp = 0
-            
-        # Update title if level changed
-        if previous_level != self.level:
-            self.update_title()
-            
-        self.save()
-        return self.level
-
-    def update_title(self):
-        """Update user's title based on their level"""
-        titles = Title.objects.filter(required_level__lte=self.level).order_by('-required_level')
-        
-        if titles.exists():
-            self.title = titles.first()
-        else:
-            none_title, created = Title.objects.get_or_create(
-                name="None", 
-                required_level=0,
-                defaults={'description': 'No title yet'}
+            # Create notification for level drop
+            Notification.objects.create(
+                user=self.user,
+                message=f"Oh no! You've dropped to level {self.level}."
             )
-            self.title = none_title
-
+        
+        self.save()
+    
+    def get_rank(self):
+        """Get the user's rank based on total XP"""
+        higher_xp_count = Profile.objects.filter(total_xp__gt=self.total_xp).count()
+        return higher_xp_count + 1
 
 class Notification(models.Model):
-    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='sent_notifications')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     message = models.TextField()
-    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    is_read = models.BooleanField(default=False)
+    
     class Meta:
         ordering = ['-created_at']
-
+    
     def __str__(self):
-        return f"Notification for {self.recipient.username}"
-
+        return f"Notification for {self.user.username}: {self.message[:30]}..."
+    
     @classmethod
     def cleanup_old_notifications(cls, days=1):
-        """Delete notifications older than the specified number of days"""
+        """Delete notifications older than specified days"""
         cutoff_date = timezone.now() - timedelta(days=days)
         old_notifications = cls.objects.filter(created_at__lt=cutoff_date)
         count = old_notifications.count()
         old_notifications.delete()
         return count
 
-
-class UserSearch(models.Model):
-    """Model to track user searches"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    query = models.CharField(max_length=255)
+class Transaction(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_transactions')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_transactions')
+    amount = models.PositiveIntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-timestamp']
-
+    
     def __str__(self):
-        return f"{self.user.username} searched for '{self.query}'"
+        return f"{self.sender.username} sent {self.amount} XP to {self.receiver.username}"

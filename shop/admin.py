@@ -3,12 +3,12 @@ from .models import ShopItem, Purchase
 
 @admin.register(ShopItem)
 class ShopItemAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'quantity', 'created_by', 'created_at')
+    list_display = ('name', 'description', 'price', 'stock', 'file_type', 'created_by')
+    list_filter = ('file_type', 'created_by')
     search_fields = ('name', 'description')
-    list_filter = ('created_at',)
 
 @admin.register(Purchase)
 class PurchaseAdmin(admin.ModelAdmin):
     list_display = ('user', 'item', 'purchased_at', 'price_paid')
-    search_fields = ('user__username', 'item__name')
     list_filter = ('purchased_at',)
+    search_fields = ('user__username', 'item__name')

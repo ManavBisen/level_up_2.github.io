@@ -1,117 +1,119 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import timezone
-from .models import DailyTask, ExtraTask, GoodWorkSession
+from .models import DailyTask, TaskCompletion, TimerSession, ExtraTask
 from datetime import timedelta
 
+class DailyTaskModelTests(TestCase):
+    def test_get_default_tasks(self):
+        # Test that default tasks are created
+        default_tasks = DailyTask.get_default_tasks()
+        self.assertEqual(len(default_tasks), 3)
+        
+        # Check that the "Do 40 minutes Good Work" task exists
+        good_work_task = DailyTask.objects.filter(name='Do 40 minutes Good Work').first()
+        self.assertIsNotNone(good_work_task)
 
-class DailyTaskTests(TestCase):
+class TaskCompletionModelTests(TestCase):
     def setUp(self):
-        # Create a test user
-        self.user = User.objects.create_user(
-            username='taskuser',
-            email='task@example.com',
-            password='taskpassword'
+        self.user = User.objects.create_user(username='testuser', password='12345')
+        self.task = DailyTask.objects.create(
+            name='Test Task',
+            description='Test Description',
+            xp_reward=80,
+            is_default=True
+        )
+    
+    def test_task_completion(self):
+        # Create a task completion
+        completion = TaskCompletion.objects.create(
+            user=self.user,
+            task=self.task
         )
         
-    def test_get_user_tasks(self):
-        """Test that daily tasks are created for a user"""
-        tasks = DailyTask.get_user_tasks(self.user)
-        
-        # Check that we have 3 default tasks
-        self.assertEqual(tasks.count(), 3)
-        
-        # Check that calling again doesn't create duplicate tasks
-        tasks2 = DailyTask.get_user_tasks(self.user)
-        self.assertEqual(tasks2.count(), 3)
-        
-    def test_process_daily_tasks(self):
-        """Test processing of daily tasks and XP rewards/penalties"""
-        # Get tasks
-        tasks = DailyTask.get_user_tasks(self.user)
-        
-        # Test case 1: No tasks completed (level 0, no penalty)
-        completed, xp_change = DailyTask.process_daily_tasks(self.user)
-        self.assertEqual(completed, 0)
-        self.assertEqual(xp_change, 0)
-        
-        # Add some XP to level up
-        self.user.profile.add_xp(10)
-        self.assertEqual(self.user.profile.level, 1)
-        
-        # Test case 2: No tasks completed (level 1, should be penalized)
-        completed, xp_change = DailyTask.process_daily_tasks(self.user)
-        self.assertEqual(completed, 0)
-        self.assertEqual(xp_change, -11)  # 10 + level
-        
-        # Reset profile XP
-        self.user.profile.level = 0
-        self.user.profile.total_xp = 0
-        self.user.profile.current_xp = 0
-        self.user.profile.save()
-        
-        # Test case 3: Complete 1 task (no reward or penalty)
-        task = tasks.first()
-        task.completed = True
-        task.save()
-        
-        completed, xp_change = DailyTask.process_daily_tasks(self.user)
-        self.assertEqual(completed, 1)
-        self.assertEqual(xp_change, 0)
-        
-        # Test case 4: Complete 2 tasks (80 XP reward)
-        task2 = tasks[1]
-        task2.completed = True
-        task2.save()
-        
-        completed, xp_change = DailyTask.process_daily_tasks(self.user)
-        self.assertEqual(completed, 2)
-        self.assertEqual(xp_change, 80)
-        
-        # Test case 5: Complete all 3 tasks (200 XP reward)
-        task3 = tasks[2]
-        task3.completed = True
-        task3.save()
-        
-        completed, xp_change = DailyTask.process_daily_tasks(self.user)
-        self.assertEqual(completed, 3)
-        self.assertEqual(xp_change, 200)
+        # Check today's completions
+        today_completions = TaskCompletion.get_today_completed(self.user)
+        self.assertEqual(today_completions.count(), 1)
+        self.assertEqual(today_completions.first(), completion)
 
-
-class GoodWorkSessionTests(TestCase):
+class TimerSessionModelTests(TestCase):
     def setUp(self):
-        # Create a test user
-        self.user = User.objects.create_user(
-            username='goodworkuser',
-            email='goodwork@example.com',
-            password='gwpassword'
-        )
+        self.user = User.objects.create_user(username='testuser', password='12345')
+        # Create default tasks
+        DailyTask.get_default_tasks()
+    
+    def test_timer_session(self):
+        # Create a timer session
+        session = TimerSession.objects.create(user=self.user)
         
-        # Create daily tasks
-        DailyTask.get_user_tasks(self.user)
-        
-    def test_good_work_session(self):
-        """Test good work session and XP earning"""
-        # Create a session
-        session = GoodWorkSession.objects.create(user=self.user)
-        
-        # Set end time to be 45 minutes later
+        # Set end time to simulate 45 minutes of work
         session.start_time = timezone.now() - timedelta(minutes=45)
+        session.end_session()
         
-        # End session
-        xp_earned = session.end_session()
-        
-        # Check that XP was earned (should be 45)
-        self.assertEqual(xp_earned, 45)
+        # Check that session ended correctly
         self.assertEqual(session.duration_minutes, 45)
+        self.assertEqual(session.xp_earned, 45)
         
-        # Check that user received XP
+        # Check that user got XP
         self.assertEqual(self.user.profile.total_xp, 45)
         
-        # Check that daily task was completed
-        good_work_task = DailyTask.objects.get(
-            user=self.user,
-            title='good_work',
-            date=timezone.now().date()
+        # Check that the "Do 40 minutes Good Work" task was completed
+        good_work_task = DailyTask.objects.get(name='Do 40 minutes Good Work')
+        self.assertTrue(
+            TaskCompletion.objects.filter(
+                user=self.user,
+                task=good_work_task
+            ).exists()
         )
-        self.assertTrue(good_work_task.completed)
+
+class ExtraTaskModelTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='admin',
+            password='12345',
+            is_staff=True
+        )
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='12345'
+        )
+    
+    def test_extra_task_creation(self):
+        # Create a task for specific user
+        personal_task = ExtraTask.objects.create(
+            name='Personal Task',
+            description='Test Description',
+            xp_reward=50,
+            assigned_by=self.admin,
+            target_user=self.user,
+            is_global=False,
+            stock=1
+        )
+        
+        # Create a global task
+        global_task = ExtraTask.objects.create(
+            name='Global Task',
+            description='Test Description',
+            xp_reward=30,
+            assigned_by=self.admin,
+            is_global=True,
+            stock=5
+        )
+        
+        # Check availability
+        self.assertTrue(personal_task.is_available_for(self.user))
+        self.assertFalse(personal_task.is_available_for(self.admin))
+        self.assertTrue(global_task.is_available_for(self.user))
+        self.assertTrue(global_task.is_available_for(self.admin))
+        
+        # Complete task
+        self.assertTrue(personal_task.complete_for_user(self.user))
+        # Stock should be 0 now
+        personal_task.refresh_from_db()
+        self.assertEqual(personal_task.stock, 0)
+        
+        # Task should no longer be available
+        self.assertFalse(personal_task.is_available_for(self.user))
+        
+        # User should have received XP
+        self.assertEqual(self.user.profile.total_xp, 50)

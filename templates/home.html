@@ -1,48 +1,53 @@
 {% extends 'base.html' %}
-
-{% block title %}Home - Gamify{% endblock %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
-    <div class="row">
+<div class="row justify-content-center">
+    <div class="col-md-10">
         {% if user.is_authenticated %}
-            <div class="col-md-8">
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h3 class="mb-0">
-                            <i class="fas fa-user-circle me-2"></i>Your Profile
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4 text-center">
-                                <img src="{{ user.profile.image.url }}" alt="Profile Picture" class="rounded-circle profile-img-lg mb-3">
-                                <h4>{{ user.username }}</h4>
-                                <div class="badge bg-info mb-2">{{ title.name }}</div>
-                            </div>
-                            <div class="col-md-8">
-                                <div class="mb-3">
-                                    <h5>
-                                        <i class="fas fa-star me-2 text-warning"></i>Level {{ level }}
-                                    </h5>
-                                    <h6>
-                                        <i class="fas fa-trophy me-2 text-primary"></i>Total XP: {{ total_xp }}
-                                    </h6>
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <img src="{{ user.profile.image.url }}" alt="{{ user.username }}'s profile picture" class="img-fluid rounded-circle profile-img mb-3" style="max-width: 150px;">
+                            <h2>{{ user.username }}</h2>
+                            <p class="badge bg-primary fs-6 mb-3">{{ user.profile.title }}</p>
+                        </div>
+                        <div class="col-md-8 text-md-start">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3">
+                                    <span class="fs-5 fw-bold">Level {{ user.profile.level }}</span>
                                 </div>
-                                
-                                <!-- Progress bar for level progress -->
-                                <div class="mb-3">
-                                    <p class="mb-1">XP to next level: {{ current_xp }} / {{ next_level_xp }}</p>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ xp_progress }}%;" aria-valuenow="{{ current_xp }}" aria-valuemin="0" aria-valuemax="{{ next_level_xp }}">
-                                            {{ current_xp }} / {{ next_level_xp }}
+                                <div class="flex-grow-1">
+                                    <div class="progress" style="height: 20px;">
+                                        {% with xp_for_next=user.profile.get_xp_for_next_level %}
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" 
+                                             style="width: {{ user.profile.xp|floatformat:0 }}%;" 
+                                             aria-valuenow="{{ user.profile.xp }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ xp_for_next }}">
+                                            {{ user.profile.xp }}/{{ xp_for_next }} XP
                                         </div>
+                                        {% endwith %}
                                     </div>
                                 </div>
-                                
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                                    <a href="{% url 'profile' %}" class="btn btn-primary">
-                                        <i class="fas fa-edit me-2"></i>Edit Profile
-                                    </a>
+                            </div>
+                            <p class="fs-5">Total XP: <span class="fw-bold">{{ user.profile.total_xp }}</span></p>
+                            <p class="fs-5 mb-2">Rank: <span class="fw-bold">#{{ user.profile.get_rank }}</span></p>
+                            
+                            <div class="mt-4">
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <a href="{% url 'daily_tasks' %}" class="btn btn-primary btn-lg w-100">
+                                            <i class="fas fa-tasks me-2"></i> Daily Tasks
+                                        </a>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <a href="{% url 'good_work_timer' %}" class="btn btn-success btn-lg w-100">
+                                            <i class="fas fa-stopwatch me-2"></i> Start Good Work
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -50,130 +55,104 @@
                 </div>
             </div>
             
-            <div class="col-md-4">
-                {% if not user.is_superuser %}
-                    <!-- Daily Tasks Preview -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0">
-                                <i class="fas fa-tasks me-2"></i>Daily Tasks
-                            </h5>
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-trophy me-2"></i> Leaderboard Preview</h5>
                         </div>
                         <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                {% for task in daily_tasks %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        {{ task.get_title_display }}
-                                        {% if task.completed %}
-                                            <span class="badge bg-success rounded-pill">
-                                                <i class="fas fa-check"></i>
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-secondary rounded-pill">
-                                                <i class="fas fa-hourglass-half"></i>
-                                            </span>
-                                        {% endif %}
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                            <div class="d-grid gap-2 mt-3">
-                                <a href="{% url 'daily_tasks' %}" class="btn btn-outline-success">
-                                    View All Tasks
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Extra Tasks Preview -->
-                    {% if extra_tasks %}
-                        <div class="card mb-4">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-clipboard-list me-2"></i>Extra Tasks
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <ul class="list-group list-group-flush">
-                                    {% for task in extra_tasks|slice:":3" %}
-                                        <li class="list-group-item">
-                                            <h6>{{ task.title }}</h6>
-                                            <p class="small text-muted mb-1">Reward: {{ task.xp_reward }} XP</p>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                                <div class="d-grid gap-2 mt-3">
-                                    <a href="{% url 'extra_tasks' %}" class="btn btn-outline-info">
-                                        View All Extra Tasks
-                                    </a>
+                            {% for profile in top_profiles|slice:":5" %}
+                                <div class="d-flex align-items-center mb-2 p-2 {% if profile.user == user %}bg-light rounded{% endif %}">
+                                    <div class="fs-5 me-3">#{{ forloop.counter }}</div>
+                                    <div class="me-3">
+                                        <img src="{{ profile.image.url }}" alt="{{ profile.user.username }}" class="rounded-circle" style="width: 40px; height: 40px;">
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">{{ profile.user.username }}</div>
+                                        <div class="small">Level {{ profile.level }} - {{ profile.title }}</div>
+                                    </div>
+                                    <div class="text-end fw-bold">
+                                        {{ profile.total_xp }} XP
+                                    </div>
                                 </div>
+                            {% empty %}
+                                <p class="text-center text-muted my-3">No data available yet.</p>
+                            {% endfor %}
+                            <div class="text-center mt-3">
+                                <a href="{% url 'leaderboard' %}" class="btn btn-outline-primary">View Full Leaderboard</a>
                             </div>
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <!-- Superuser Actions -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-danger text-white">
-                            <h5 class="mb-0">
-                                <i class="fas fa-crown me-2"></i>Monarch Actions
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-grid gap-2">
-                                <a href="{% url 'user_search' %}" class="btn btn-outline-primary mb-2">
-                                    <i class="fas fa-search me-2"></i>Search Users
-                                </a>
-                                <a href="{% url 'add_extra_task' %}" class="btn btn-outline-success mb-2">
-                                    <i class="fas fa-plus-circle me-2"></i>Add Extra Task
-                                </a>
-                                <a href="{% url 'manage_shop' %}" class="btn btn-outline-info mb-2">
-                                    <i class="fas fa-store me-2"></i>Manage Shop
-                                </a>
-                                <a href="{% url 'admin:index' %}" class="btn btn-outline-danger">
-                                    <i class="fas fa-tools me-2"></i>Django Admin
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-        {% else %}
-            <div class="col-12 text-center">
-                <div class="p-5 mb-4 bg-light rounded-3">
-                    <div class="container-fluid py-5">
-                        <h1 class="display-5 fw-bold">Welcome to Gamify</h1>
-                        <p class="fs-4">Transform your life into a game! Complete tasks, earn XP, level up, and unlock achievements.</p>
-                        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                            <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-4 gap-3">
-                                <i class="fas fa-user-plus me-2"></i>Register
-                            </a>
-                            <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg px-4">
-                                <i class="fas fa-sign-in-alt me-2"></i>Login
-                            </a>
                         </div>
                     </div>
                 </div>
                 
-                <div class="row align-items-md-stretch">
-                    <div class="col-md-4">
-                        <div class="h-100 p-5 text-white bg-primary rounded-3">
-                            <h2>Track Daily Tasks</h2>
-                            <p>Complete daily tasks to earn XP and level up. The more tasks you complete, the faster you'll progress!</p>
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-bullhorn me-2"></i> Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            {% for notification in user.notifications.all|slice:":5" %}
+                                <div class="alert {% if not notification.is_read %}alert-primary{% else %}alert-light{% endif %} mb-2">
+                                    <small class="float-end text-muted">{{ notification.created_at|timesince }} ago</small>
+                                    <p class="mb-0">{{ notification.message }}</p>
+                                </div>
+                            {% empty %}
+                                <p class="text-center text-muted my-3">No recent activity to display.</p>
+                            {% endfor %}
+                            <div class="text-center mt-3">
+                                <a href="{% url 'notifications' %}" class="btn btn-outline-success">View All Notifications</a>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="h-100 p-5 bg-success text-white rounded-3">
-                            <h2>Good Work Timer</h2>
-                            <p>Use the Good Work timer to track productive time and earn XP for every minute of focused work.</p>
+                </div>
+            </div>
+            
+        {% else %}
+            <!-- For non-logged in users -->
+            <div class="text-center mb-5 mt-4">
+                <h1 class="display-4 fw-bold">Transform Your Life Into A Game</h1>
+                <p class="lead mb-4">Earn XP, level up, and compete with friends while building good habits and achieving your goals.</p>
+                <div class="mb-5 d-flex justify-content-center">
+                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-user-plus me-2"></i> Get Started
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i> Sign In
+                    </a>
+                </div>
+            </div>
+            
+            <div class="row g-4 py-3">
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center py-4">
+                            <i class="fas fa-tasks fa-3x text-primary mb-3"></i>
+                            <h3>Daily Tasks</h3>
+                            <p>Complete daily tasks to earn XP and build consistent habits. Get rewarded for consistency.</p>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="h-100 p-5 bg-info text-white rounded-3">
-                            <h2>Community Features</h2>
-                            <p>Chat with other users, send XP as gifts, and climb the leaderboard to show off your achievements!</p>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center py-4">
+                            <i class="fas fa-level-up-alt fa-3x text-success mb-3"></i>
+                            <h3>Level Up</h3>
+                            <p>Gain experience points, level up, and unlock new titles to showcase your progress.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center py-4">
+                            <i class="fas fa-users fa-3x text-info mb-3"></i>
+                            <h3>Community</h3>
+                            <p>Connect with other users, compete on the leaderboard, and share your journey.</p>
                         </div>
                     </div>
                 </div>
             </div>
         {% endif %}
     </div>
+</div>
 {% endblock %}

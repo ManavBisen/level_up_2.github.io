@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Update Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Update Profile</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3 text-center">
+                                <img src="{{ user.profile.image.url }}" alt="Current profile picture" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
+                                <h5>Current Profile Picture</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {{ p_form|crispy }}
+                        </div>
+                    </div>
+                    
+                    <fieldset class="mb-3">
+                        <legend class="border-bottom mb-3">User Information</legend>
+                        {{ u_form|crispy }}
+                    </fieldset>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-save me-2"></i> Update
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

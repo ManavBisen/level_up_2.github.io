@@ -1,56 +1,61 @@
 {% extends 'base.html' %}
-
-{% block title %}Shop - Gamify{% endblock %}
+{% block title %}Shop{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-8">
-        <div class="card shadow">
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow mb-4">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h3 class="mb-0">
-                    <i class="fas fa-store me-2"></i>Shop
-                </h3>
-                <a href="{% url 'my_purchases' %}" class="btn btn-light btn-sm">
-                    <i class="fas fa-shopping-bag me-1"></i>My Purchases
-                </a>
+                <h3 class="mb-0"><i class="fas fa-store me-2"></i> Shop</h3>
+                <div>
+                    <span class="badge bg-light text-dark fs-5">
+                        <i class="fas fa-coins me-2"></i> Balance: {{ user_xp }} XP
+                    </span>
+                    <a href="{% url 'my_purchases' %}" class="btn btn-light btn-sm ms-2">
+                        <i class="fas fa-shopping-bag me-1"></i> My Purchases
+                    </a>
+                    {% if user.is_staff %}
+                    <a href="{% url 'create_shop_item' %}" class="btn btn-light btn-sm ms-2">
+                        <i class="fas fa-plus me-1"></i> Add Item
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 {% if items %}
                     <div class="row">
                         {% for item in items %}
-                            <div class="col-md-6 col-lg-4 mb-4">
-                                <div class="card h-100">
-                                    <div class="card-header bg-info text-white">
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-header">
                                         <h5 class="mb-0">{{ item.name }}</h5>
                                     </div>
                                     <div class="card-body">
-                                        <p>{{ item.description }}</p>
-                                        
-                                        <div class="d-flex justify-content-between mb-3">
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-coins me-1"></i>{{ item.price }} XP
-                                            </span>
-                                            <span class="badge bg-secondary">
-                                                <i class="fas fa-cubes me-1"></i>{{ item.quantity }} left
-                                            </span>
-                                        </div>
-                                        
-                                        {% if item.file %}
-                                            <div class="mb-3">
-                                                <span class="badge bg-info">
-                                                    <i class="fas fa-file me-1"></i>Includes downloadable file
-                                                </span>
+                                        <p>{{ item.description|truncatechars:100 }}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="badge bg-primary">{{ item.price }} XP</span>
+                                                <span class="badge bg-secondary">Stock: {{ item.stock }}</span>
+                                                <span class="badge bg-info">{{ item.get_file_type_display }}</span>
                                             </div>
-                                        {% endif %}
-                                        
-                                        <div class="d-grid">
-                                            <a href="{% url 'purchase_item' item.id %}" class="btn btn-primary">
-                                                <i class="fas fa-shopping-cart me-2"></i>Purchase
-                                            </a>
                                         </div>
                                     </div>
-                                    <div class="card-footer text-muted">
-                                        <small>Added by {{ item.created_by.username }}</small>
+                                    <div class="card-footer bg-transparent border-top-0">
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'item_detail' item.id %}" class="btn btn-outline-primary">
+                                                <i class="fas fa-info-circle me-1"></i> Details
+                                            </a>
+                                            {% if user.is_staff %}
+                                            <div class="d-flex gap-2">
+                                                <a href="{% url 'edit_shop_item' item.id %}" class="btn btn-outline-warning flex-grow-1">
+                                                    <i class="fas fa-edit me-1"></i> Edit
+                                                </a>
+                                                <a href="{% url 'delete_shop_item' item.id %}" class="btn btn-outline-danger flex-grow-1">
+                                                    <i class="fas fa-trash me-1"></i> Delete
+                                                </a>
+                                            </div>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -60,51 +65,16 @@
                     <div class="text-center py-5">
                         <i class="fas fa-store-slash fa-4x text-muted mb-3"></i>
                         <h4>No items available</h4>
-                        <p>Check back later for new items in the shop!</p>
+                        <p class="text-muted">There are no items in the shop at the moment.</p>
+                        {% if user.is_staff %}
+                            <a href="{% url 'create_shop_item' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i> Add an Item
+                            </a>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>
         </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow mb-4">
-            <div class="card-header bg-success text-white">
-                <h3 class="mb-0">
-                    <i class="fas fa-wallet me-2"></i>Your Balance
-                </h3>
-            </div>
-            <div class="card-body text-center">
-                <h4 class="mb-2">Available XP</h4>
-                <h2 class="display-4 mb-3">{{ user.profile.total_xp }}</h2>
-                
-                <div class="d-grid gap-2">
-                    <a href="{% url 'bank' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-university me-2"></i>Go to Bank
-                    </a>
-                </div>
-            </div>
-        </div>
-        
-        {% if user.is_superuser %}
-            <div class="card shadow">
-                <div class="card-header bg-danger text-white">
-                    <h3 class="mb-0">
-                        <i class="fas fa-tools me-2"></i>Manage Shop
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'manage_shop' %}" class="btn btn-danger">
-                            <i class="fas fa-cog me-2"></i>Shop Management
-                        </a>
-                        <a href="{% url 'add_shop_item' %}" class="btn btn-outline-primary">
-                            <i class="fas fa-plus-circle me-2"></i>Add New Item
-                        </a>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

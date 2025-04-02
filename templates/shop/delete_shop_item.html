@@ -1,46 +1,38 @@
 {% extends 'base.html' %}
-
-{% block title %}Delete Shop Item - Gamify{% endblock %}
+{% block title %}Delete {{ item.name }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-6">
+    <div class="col-md-6">
         <div class="card shadow">
             <div class="card-header bg-danger text-white">
-                <h3 class="mb-0">
-                    <i class="fas fa-trash-alt me-2"></i>Delete Shop Item
-                </h3>
+                <h3 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i> Delete Shop Item</h3>
             </div>
             <div class="card-body">
                 <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> This action cannot be undone. This will permanently delete the item "{{ item.name }}" from the shop.
+                    <i class="fas fa-exclamation-circle me-2"></i> This action cannot be undone!
                 </div>
                 
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">Item Details</h5>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Name:</strong> {{ item.name }}</p>
-                        <p><strong>Price:</strong> {{ item.price }} XP</p>
-                        <p><strong>Quantity:</strong> {{ item.quantity }}</p>
-                        <p><strong>Created by:</strong> {{ item.created_by.username }}</p>
-                        <p><strong>Created at:</strong> {{ item.created_at|date:"M d, Y" }}</p>
-                        {% if item.file %}
-                            <p><strong>Has file:</strong> Yes ({{ item.file_name }})</p>
-                        {% endif %}
-                    </div>
+                <p class="lead">Are you sure you want to delete the shop item <strong>"{{ item.name }}"</strong>?</p>
+                
+                <div class="mb-4">
+                    <h5>Item Details:</h5>
+                    <ul>
+                        <li><strong>Price:</strong> {{ item.price }} XP</li>
+                        <li><strong>Stock:</strong> {{ item.stock }}</li>
+                        <li><strong>Created by:</strong> {{ item.created_by.username }}</li>
+                        <li><strong>Created on:</strong> {{ item.created_at|date:"M d, Y" }}</li>
+                    </ul>
                 </div>
                 
                 <form method="POST">
                     {% csrf_token %}
                     <div class="d-flex justify-content-between">
-                        <a href="{% url 'manage_shop' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        <a href="{% url 'shop' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
                         </a>
                         <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash-alt me-2"></i>Delete Permanently
+                            <i class="fas fa-trash me-2"></i> Delete Permanently
                         </button>
                     </div>
                 </form>

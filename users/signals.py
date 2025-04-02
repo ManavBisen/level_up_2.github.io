@@ -1,37 +1,43 @@
 from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 from django.dispatch import receiver
-from .models import Profile, Title
-
+from .models import Profile, LevelTitle
 
 @receiver(post_save, sender=User)
 def create_profile(sender, instance, created, **kwargs):
+    """Create Profile when new User is created"""
     if created:
-        # Get the default "None" title
-        none_title, created = Title.objects.get_or_create(
-            name="None", 
-            required_level=0,
-            defaults={'description': 'No title yet'}
-        )
-        
-        Profile.objects.create(
-            user=instance, 
-            title=none_title
-        )
-        
-        # If user is a superuser, set special attributes
-        if instance.is_superuser:
-            profile = Profile.objects.get(user=instance)
-            profile.level = 100  # High level for superuser
-            monarch_title, created = Title.objects.get_or_create(
-                name="Monarch", 
-                required_level=100,
-                defaults={'description': 'The ruler of all'}
-            )
-            profile.title = monarch_title
-            profile.save()
-
+        Profile.objects.create(user=instance)
 
 @receiver(post_save, sender=User)
 def save_profile(sender, instance, **kwargs):
+    """Save Profile when User is saved"""
     instance.profile.save()
+
+@receiver(post_save, sender=Profile)
+def update_title_based_on_level(sender, instance, created, **kwargs):
+    """Update user title when their profile is saved"""
+    if not created:  # Only run for existing profiles (not during creation)
+        instance._update_title()
+        instance.save()
+
+def create_default_level_titles():
+    """Create default level titles if they don't exist"""
+    default_titles = [
+        (0, 'None'),
+        (1, 'Beginner'),
+        (5, 'Player'),
+        (10, 'Bounty 1Thousand'),
+        (20, 'Bounty 100Thousand'),
+        (30, 'Champion'),
+        (40, 'Master'),
+        (50, 'Grand Master'),
+        (60, 'Elite'),
+        (70, 'Legend'),
+        (80, 'Mythical'),
+        (90, 'Godlike'),
+        (100, 'Immortal'),
+    ]
+    
+    for level, title in default_titles:
+        LevelTitle.objects.get_or_create(level=level, defaults={'title': title})

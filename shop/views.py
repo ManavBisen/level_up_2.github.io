@@ -1,190 +1,135 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from django.http import FileResponse, Http404
-from django.conf import settings
-from django.core.files.storage import default_storage
-from django.utils.text import slugify
+from django.http import FileResponse
+from django.urls import reverse
 
 from .models import ShopItem, Purchase
-import os
-
+from .forms import ShopItemForm
+from users.models import Notification
 
 @login_required
 def shop(request):
-    """View the shop with available items"""
-    items = ShopItem.objects.filter(quantity__gt=0)
+    """Shop page displaying available items"""
+    items = ShopItem.objects.filter(stock__gt=0).order_by('-created_at')
     
     context = {
-        'items': items
+        'items': items,
+        'user_xp': request.user.profile.total_xp,
     }
-    
     return render(request, 'shop/shop.html', context)
 
-
 @login_required
-def purchase_item(request, item_id):
-    """Purchase an item from the shop"""
+def item_detail(request, item_id):
+    """Detail view for a shop item"""
     item = get_object_or_404(ShopItem, id=item_id)
     
-    if request.method == 'POST':
-        success, message = Purchase.purchase_item(request.user, item)
-        
-        if success:
-            messages.success(request, message)
+    # Handle purchase
+    if request.method == 'POST' and 'purchase' in request.POST:
+        if item.is_available():
+            if request.user.profile.total_xp >= item.price:
+                # Process purchase
+                purchase = item.purchase(request.user)
+                if purchase:
+                    messages.success(request, f"You have purchased '{item.name}' for {item.price} XP!")
+                    return redirect('item_detail', item_id=item.id)
+                else:
+                    messages.error(request, "Error processing purchase.")
+            else:
+                messages.error(request, f"You don't have enough XP to purchase this item. You need {item.price} XP.")
         else:
-            messages.error(request, message)
-        
-        return redirect('shop')
+            messages.error(request, "This item is out of stock.")
+    
+    # Get user's purchases of this item
+    user_purchases = Purchase.objects.filter(user=request.user, item=item)
+    has_purchased = user_purchases.exists()
     
     context = {
-        'item': item
+        'item': item,
+        'user_xp': request.user.profile.total_xp,
+        'has_purchased': has_purchased,
     }
-    
-    return render(request, 'shop/purchase_confirm.html', context)
+    return render(request, 'shop/item_detail.html', context)
 
+@login_required
+def download_item(request, purchase_id):
+    """Download a purchased item"""
+    purchase = get_object_or_404(Purchase, id=purchase_id, user=request.user)
+    item = purchase.item
+    
+    if item.file:
+        response = FileResponse(item.file.open('rb'))
+        return response
+    
+    messages.error(request, "No file is available for this item.")
+    return redirect('item_detail', item_id=item.id)
 
 @login_required
 def my_purchases(request):
-    """View user's purchases"""
-    purchases = Purchase.objects.filter(user=request.user)
+    """View showing the user's purchases"""
+    purchases = Purchase.objects.filter(user=request.user).order_by('-purchased_at')
     
     context = {
-        'purchases': purchases
+        'purchases': purchases,
     }
-    
     return render(request, 'shop/my_purchases.html', context)
 
-
-@login_required
-def download_purchased_item(request, purchase_id):
-    """Download a purchased item"""
-    purchase = get_object_or_404(Purchase, id=purchase_id, user=request.user)
-    
-    if not purchase.item.file:
-        messages.error(request, "This item does not have a downloadable file.")
-        return redirect('my_purchases')
-    
-    try:
-        file_path = purchase.item.file.path
-        response = FileResponse(open(file_path, 'rb'))
-        
-        # Use the saved file name if available, otherwise use the item name
-        filename = purchase.item.file_name
-        if not filename:
-            filename = f"{slugify(purchase.item.name)}{os.path.splitext(file_path)[1]}"
-        
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-    except FileNotFoundError:
-        messages.error(request, "File not found. Please contact support.")
-        return redirect('my_purchases')
-
-
-@login_required
-def manage_shop(request):
-    """Manage shop items (superuser only)"""
-    if not request.user.is_superuser:
-        messages.error(request, "You don't have permission to manage the shop.")
-        return redirect('shop')
-    
-    items = ShopItem.objects.all()
-    
-    context = {
-        'items': items
-    }
-    
-    return render(request, 'shop/manage_shop.html', context)
-
-
-@login_required
-def add_shop_item(request):
-    """Add a new shop item (superuser only)"""
-    if not request.user.is_superuser:
-        messages.error(request, "You don't have permission to add shop items.")
-        return redirect('shop')
-    
+@staff_member_required
+def create_shop_item(request):
+    """Create a new shop item (superuser only)"""
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        price = int(request.POST.get('price', 0))
-        quantity = int(request.POST.get('quantity', 1))
-        file = request.FILES.get('file', None)
-        
-        item = ShopItem(
-            name=name,
-            description=description,
-            price=price,
-            quantity=quantity,
-            created_by=request.user
-        )
-        
-        if file:
-            item.file = file
-            item.file_name = file.name
-        
-        item.save()
-        messages.success(request, f"Shop item '{name}' added successfully.")
-        return redirect('manage_shop')
+        form = ShopItemForm(request.POST, request.FILES)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.created_by = request.user
+            item.save()
+            
+            # Notify all users about new item
+            for user in User.objects.filter(is_staff=False):
+                Notification.objects.create(
+                    user=user,
+                    message=f"New item in the shop: '{item.name}' for {item.price} XP!"
+                )
+            
+            messages.success(request, f"Shop item '{item.name}' has been created!")
+            return redirect('shop')
+    else:
+        form = ShopItemForm()
     
-    return render(request, 'shop/add_shop_item.html')
+    context = {'form': form}
+    return render(request, 'shop/create_shop_item.html', context)
 
-
-@login_required
+@staff_member_required
 def edit_shop_item(request, item_id):
     """Edit a shop item (superuser only)"""
-    if not request.user.is_superuser:
-        messages.error(request, "You don't have permission to edit shop items.")
-        return redirect('shop')
-    
     item = get_object_or_404(ShopItem, id=item_id)
     
     if request.method == 'POST':
-        item.name = request.POST.get('name')
-        item.description = request.POST.get('description')
-        item.price = int(request.POST.get('price', 0))
-        item.quantity = int(request.POST.get('quantity', 1))
-        
-        file = request.FILES.get('file', None)
-        if file:
-            # Delete old file if exists
-            if item.file:
-                default_storage.delete(item.file.path)
-            
-            item.file = file
-            item.file_name = file.name
-        
-        item.save()
-        messages.success(request, f"Shop item '{item.name}' updated successfully.")
-        return redirect('manage_shop')
+        form = ShopItemForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Shop item '{item.name}' has been updated!")
+            return redirect('shop')
+    else:
+        form = ShopItemForm(instance=item)
     
     context = {
-        'item': item
+        'form': form,
+        'item': item,
     }
-    
     return render(request, 'shop/edit_shop_item.html', context)
 
-
-@login_required
+@staff_member_required
 def delete_shop_item(request, item_id):
     """Delete a shop item (superuser only)"""
-    if not request.user.is_superuser:
-        messages.error(request, "You don't have permission to delete shop items.")
-        return redirect('shop')
-    
     item = get_object_or_404(ShopItem, id=item_id)
     
     if request.method == 'POST':
-        # Delete file if exists
-        if item.file:
-            default_storage.delete(item.file.path)
-        
+        item_name = item.name
         item.delete()
-        messages.success(request, f"Shop item '{item.name}' deleted successfully.")
-        return redirect('manage_shop')
+        messages.success(request, f"Shop item '{item_name}' has been deleted!")
+        return redirect('shop')
     
-    context = {
-        'item': item
-    }
-    
+    context = {'item': item}
     return render(request, 'shop/delete_shop_item.html', context)

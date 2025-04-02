@@ -1,104 +1,143 @@
 {% extends 'base.html' %}
-
-{% block title %}Daily Tasks - Gamify{% endblock %}
+{% block title %}Daily Tasks{% endblock %}
 
 {% block content %}
-<div class="card shadow">
-    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-        <h3 class="mb-0">
-            <i class="fas fa-tasks me-2"></i>Daily Tasks
-        </h3>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-info-circle me-3 fa-2x"></i>
-                <div>
-                    <h5 class="mb-1">Task Rewards:</h5>
-                    <ul class="mb-0">
-                        <li>0 tasks completed: <span class="text-danger">Lose (10 + level) XP</span> (only if level > 0)</li>
-                        <li>1 task completed: No reward or penalty</li>
-                        <li>2 tasks completed: <span class="text-success">Gain 80 XP</span></li>
-                        <li>3 tasks completed: <span class="text-success">Gain 200 XP</span></li>
-                    </ul>
-                </div>
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-tasks me-2"></i> Daily Tasks</h3>
             </div>
-        </div>
-
-        <div class="list-group mb-4">
-            {% for task in tasks %}
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" 
-                               id="task-{{ task.id }}" 
-                               data-task-id="{{ task.id }}"
-                               {% if task.completed %}checked{% endif %}>
-                        <label class="form-check-label" for="task-{{ task.id }}">
-                            {{ task.get_title_display }}
-                        </label>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h5>Daily Progress</h5>
+                    <div class="progress" style="height: 25px;">
+                        <div 
+                            class="progress-bar progress-bar-striped progress-bar-animated" 
+                            role="progressbar" 
+                            style="width: {{ completion_percentage }}%;" 
+                            aria-valuenow="{{ completion_percentage }}" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100">
+                            {{ completion_percentage|floatformat:0 }}% Complete
+                        </div>
                     </div>
-                    <span class="badge {% if task.completed %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
-                        {% if task.completed %}
-                            <i class="fas fa-check"></i> Completed
-                        {% else %}
-                            <i class="fas fa-hourglass-half"></i> Pending
-                        {% endif %}
-                    </span>
                 </div>
-            {% endfor %}
-        </div>
-
-        <form method="POST" action="{% url 'submit_daily_tasks' %}">
-            {% csrf_token %}
-            <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-success btn-lg">
-                    <i class="fas fa-paper-plane me-2"></i>Submit Tasks
-                </button>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5>Default Tasks</h5>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> Complete all tasks to earn 150 XP. Complete 2 out of 3 tasks to earn 80 XP.
+                        </div>
+                        
+                        <div class="list-group">
+                            {% for task in default_tasks %}
+                                <div class="list-group-item {% if task.id in completed_task_ids %}list-group-item-success{% endif %}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1">{{ task.name }}</h5>
+                                            <p class="mb-1">{{ task.description }}</p>
+                                            <small class="text-muted">Reward: {{ task.xp_reward }} XP</small>
+                                        </div>
+                                        
+                                        <div>
+                                            {% if task.id in completed_task_ids %}
+                                                <span class="badge bg-success p-2">
+                                                    <i class="fas fa-check me-1"></i> Completed
+                                                </span>
+                                            {% else %}
+                                                {% if task.name == 'Do 40 minutes Good Work' %}
+                                                    <div>
+                                                        <p class="mb-1">Today's progress: {{ today_good_work_minutes }} minutes</p>
+                                                        <div class="progress mb-2" style="height: 10px; width: 200px;">
+                                                            <div class="progress-bar bg-info" role="progressbar" 
+                                                                style="width: {{ today_good_work_minutes|divide:40|multiply:100 }}%;" 
+                                                                aria-valuenow="{{ today_good_work_minutes }}" 
+                                                                aria-valuemin="0" aria-valuemax="40">
+                                                            </div>
+                                                        </div>
+                                                        <a href="{% url 'good_work_timer' %}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-stopwatch me-1"></i> Go to Timer
+                                                        </a>
+                                                    </div>
+                                                {% else %}
+                                                    <form method="POST" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="task_id" value="{{ task.id }}">
+                                                        <input type="hidden" name="action" value="complete">
+                                                        <button type="submit" class="btn btn-sm btn-success">
+                                                            <i class="fas fa-check me-1"></i> Mark as Complete
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if extra_tasks %}
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5>Extra Tasks</h5>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-circle me-2"></i> These are special tasks assigned by admins or available for everyone.
+                        </div>
+                        
+                        <div class="list-group">
+                            {% for task in extra_tasks %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1">
+                                                {{ task.name }}
+                                                {% if task.is_global %}
+                                                    <span class="badge bg-info">Global</span>
+                                                {% endif %}
+                                            </h5>
+                                            <p class="mb-1">{{ task.description }}</p>
+                                            <small class="text-muted">Reward: {{ task.xp_reward }} XP | Stock: {{ task.stock }}</small>
+                                            {% if task.expires_at %}
+                                                <small class="d-block text-danger">Expires: {{ task.expires_at|date:"M d, Y H:i" }}</small>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div>
+                                            <form method="POST" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="task_id" value="{{ task.id }}">
+                                                <input type="hidden" name="action" value="complete_extra">
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check me-1"></i> Complete Task
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
             </div>
-        </form>
+        </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- Template filters for progress bar calculations -->
 <script>
-    $(document).ready(function() {
-        // Handle checkbox changes
-        $('.form-check-input').change(function() {
-            const taskId = $(this).data('task-id');
-            const completed = $(this).prop('checked');
-            
-            // Update UI first
-            const badge = $(this).closest('.list-group-item').find('.badge');
-            if (completed) {
-                badge.removeClass('bg-secondary').addClass('bg-success');
-                badge.html('<i class="fas fa-check"></i> Completed');
-            } else {
-                badge.removeClass('bg-success').addClass('bg-secondary');
-                badge.html('<i class="fas fa-hourglass-half"></i> Pending');
-            }
-            
-            // Send AJAX request to update task
-            $.ajax({
-                url: '{% url "update_daily_task" %}',
-                type: 'POST',
-                data: {
-                    'task_id': taskId,
-                    'completed': completed,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function(data) {
-                    if (!data.success) {
-                        alert('Error updating task status. Please try again.');
-                    }
-                },
-                error: function() {
-                    alert('Error updating task status. Please try again.');
-                    // Revert the checkbox state if there was an error
-                    $(this).prop('checked', !completed);
-                }
-            });
-        });
-    });
+    // These would normally be Django template filters, but we'll implement basic JS equivalents
+    function divide(val, divisor) {
+        return val / divisor;
+    }
+    
+    function multiply(val, factor) {
+        return val * factor;
+    }
 </script>
 {% endblock %}

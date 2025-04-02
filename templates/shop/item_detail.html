@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}{{ item.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">{{ item.name }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-7">
+                        <h5 class="card-title">Description</h5>
+                        <p class="card-text">{{ item.description }}</p>
+                        <div class="mb-4">
+                            <span class="badge bg-primary me-2">{{ item.price }} XP</span>
+                            <span class="badge {% if item.stock > 0 %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                {% if item.stock > 0 %}In Stock: {{ item.stock }}{% else %}Out of Stock{% endif %}
+                            </span>
+                            <span class="badge bg-info">{{ item.get_file_type_display }}</span>
+                        </div>
+                        <p class="text-muted">
+                            <small>Added by {{ item.created_by.username }} on {{ item.created_at|date:"M d, Y" }}</small>
+                        </p>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Your Balance</h5>
+                                <h2 class="text-success mb-3">{{ user_xp }} XP</h2>
+                                {% if has_purchased %}
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle me-2"></i> You already own this item
+                                    </div>
+                                    {% if item.file %}
+                                    <a href="{% url 'download_item' purchase_id %}" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-download me-2"></i> Download
+                                    </a>
+                                    {% endif %}
+                                {% else %}
+                                    {% if item.stock > 0 %}
+                                        {% if user_xp >= item.price %}
+                                            <form method="POST">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="purchase" value="1">
+                                                <button type="submit" class="btn btn-success btn-lg">
+                                                    <i class="fas fa-shopping-cart me-2"></i> Purchase for {{ item.price }} XP
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-circle me-2"></i> You need {{ item.price|sub:user_xp }} more XP to purchase this item
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="alert alert-danger">
+                                            <i class="fas fa-times-circle me-2"></i> This item is out of stock
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'shop' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Shop
+                    </a>
+                    
+                    {% if user.is_staff %}
+                    <div>
+                        <a href="{% url 'edit_shop_item' item.id %}" class="btn btn-warning me-2">
+                            <i class="fas fa-edit me-1"></i> Edit
+                        </a>
+                        <a href="{% url 'delete_shop_item' item.id %}" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> Delete
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Template filter for subtraction
+function sub(a, b) {
+    return a - b;
+}
+</script>
+{% endblock %}

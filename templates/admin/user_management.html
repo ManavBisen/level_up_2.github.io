@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h3 class="mb-0"><i class="fas fa-users-cog me-2"></i> User Management</h3>
+                <div>
+                    <a href="{% url 'create_extra_task' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-1"></i> Create Extra Task
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="mb-4">
+                    <div class="input-group">
+                        {{ search_form.username }}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> Search Users
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Level / XP</th>
+                                <th>Title</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for profile_user in page_obj %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ profile_user.profile.image.url }}" alt="{{ profile_user.username }}" 
+                                                 class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                            <div>
+                                                <strong>{{ profile_user.username }}</strong>
+                                                <small class="d-block text-muted">{{ profile_user.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>Level {{ profile_user.profile.level }} ({{ profile_user.profile.total_xp }} XP)</td>
+                                    <td>{{ profile_user.profile.title }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#userModal{{ profile_user.id }}">
+                                            <i class="fas fa-edit me-1"></i> Manage
+                                        </button>
+                                        
+                                        <!-- Modal for user actions -->
+                                        <div class="modal fade" id="userModal{{ profile_user.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Manage {{ profile_user.username }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <form method="POST">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ profile_user.id }}">
+                                                            
+                                                            <div class="mb-3">
+                                                                <h6>Adjust XP</h6>
+                                                                <div class="input-group mb-2">
+                                                                    <input type="number" class="form-control" name="xp_amount" placeholder="Amount of XP" min="1" required>
+                                                                    <button type="submit" name="action" value="add" class="btn btn-success">
+                                                                        <i class="fas fa-plus-circle me-1"></i> Add
+                                                                    </button>
+                                                                    <button type="submit" name="action" value="remove" class="btn btn-danger">
+                                                                        <i class="fas fa-minus-circle me-1"></i> Remove
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="mb-3">
+                                                                <h6>Special Title</h6>
+                                                                <div class="input-group">
+                                                                    <select name="special_title" class="form-select">
+                                                                        <option value="">-- Select Special Title --</option>
+                                                                        <option value="cheater">Cheater</option>
+                                                                        <option value="good guy">Good Guy</option>
+                                                                    </select>
+                                                                    <button type="submit" name="action" value="title" class="btn btn-warning">
+                                                                        <i class="fas fa-tag me-1"></i> Set Title
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="mb-3">
+                                                                <h6>User Information</h6>
+                                                                <p><strong>Username:</strong> {{ profile_user.username }}</p>
+                                                                <p><strong>Email:</strong> {{ profile_user.email }}</p>
+                                                                <p><strong>Level:</strong> {{ profile_user.profile.level }}</p>
+                                                                <p><strong>Total XP:</strong> {{ profile_user.profile.total_xp }}</p>
+                                                                <p><strong>Current Title:</strong> {{ profile_user.profile.title }}</p>
+                                                                <p><strong>Join Date:</strong> {{ profile_user.date_joined|date:"M d, Y" }}</p>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <a href="{% url 'direct_message' profile_user.username %}" class="btn btn-outline-primary">
+                                                            <i class="fas fa-comment me-1"></i> Message
+                                                        </a>
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">No users found</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="User pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if search_form.username.value %}&username={{ search_form.username.value }}{% endif %}">&laquo; First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_form.username.value %}&username={{ search_form.username.value }}{% endif %}">Previous</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">&laquo; First</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <a class="page-link" href="#">{{ num }}</a>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if search_form.username.value %}&username={{ search_form.username.value }}{% endif %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_form.username.value %}&username={{ search_form.username.value }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_form.username.value %}&username={{ search_form.username.value }}{% endif %}">Last &raquo;</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">Last &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
