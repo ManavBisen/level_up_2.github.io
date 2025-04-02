@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Daily Tasks - Gamify{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">
+            <i class="fas fa-tasks me-2"></i>Daily Tasks
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle me-3 fa-2x"></i>
+                <div>
+                    <h5 class="mb-1">Task Rewards:</h5>
+                    <ul class="mb-0">
+                        <li>0 tasks completed: <span class="text-danger">Lose (10 + level) XP</span> (only if level > 0)</li>
+                        <li>1 task completed: No reward or penalty</li>
+                        <li>2 tasks completed: <span class="text-success">Gain 80 XP</span></li>
+                        <li>3 tasks completed: <span class="text-success">Gain 200 XP</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="list-group mb-4">
+            {% for task in tasks %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               id="task-{{ task.id }}" 
+                               data-task-id="{{ task.id }}"
+                               {% if task.completed %}checked{% endif %}>
+                        <label class="form-check-label" for="task-{{ task.id }}">
+                            {{ task.get_title_display }}
+                        </label>
+                    </div>
+                    <span class="badge {% if task.completed %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                        {% if task.completed %}
+                            <i class="fas fa-check"></i> Completed
+                        {% else %}
+                            <i class="fas fa-hourglass-half"></i> Pending
+                        {% endif %}
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <form method="POST" action="{% url 'submit_daily_tasks' %}">
+            {% csrf_token %}
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Tasks
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Handle checkbox changes
+        $('.form-check-input').change(function() {
+            const taskId = $(this).data('task-id');
+            const completed = $(this).prop('checked');
+            
+            // Update UI first
+            const badge = $(this).closest('.list-group-item').find('.badge');
+            if (completed) {
+                badge.removeClass('bg-secondary').addClass('bg-success');
+                badge.html('<i class="fas fa-check"></i> Completed');
+            } else {
+                badge.removeClass('bg-success').addClass('bg-secondary');
+                badge.html('<i class="fas fa-hourglass-half"></i> Pending');
+            }
+            
+            // Send AJAX request to update task
+            $.ajax({
+                url: '{% url "update_daily_task" %}',
+                type: 'POST',
+                data: {
+                    'task_id': taskId,
+                    'completed': completed,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(data) {
+                    if (!data.success) {
+                        alert('Error updating task status. Please try again.');
+                    }
+                },
+                error: function() {
+                    alert('Error updating task status. Please try again.');
+                    // Revert the checkbox state if there was an error
+                    $(this).prop('checked', !completed);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

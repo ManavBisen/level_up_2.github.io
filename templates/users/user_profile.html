@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.username }}'s Profile - Gamify{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-user-circle me-2"></i>{{ profile_user.username }}'s Profile
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3 mb-md-0">
+                        <img src="{{ profile_user.profile.image.url }}" alt="Profile Picture" class="profile-img-lg rounded-circle mb-3">
+                        <h4>{{ profile_user.username }}</h4>
+                        <div class="badge bg-info mb-2">{{ profile_user.profile.title.name }}</div>
+                        
+                        <div class="mt-3">
+                            <a href="{% url 'direct_message_conversation' profile_user.username %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-comment me-2"></i>Send Message
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <h5>
+                                <i class="fas fa-star me-2 text-warning"></i>Level {{ profile_user.profile.level }}
+                            </h5>
+                            <h6>
+                                <i class="fas fa-trophy me-2 text-primary"></i>Total XP: {{ profile_user.profile.total_xp }}
+                            </h6>
+                        </div>
+                        
+                        <!-- Progress bar for level progress -->
+                        <div class="mb-3">
+                            <p class="mb-1">XP to next level: {{ profile_user.profile.current_xp }} / {{ next_level_xp }}</p>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ profile_user.profile.current_xp }}" aria-valuemin="0" aria-valuemax="{{ next_level_xp }}">
+                                    {{ profile_user.profile.current_xp }} / {{ next_level_xp }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if user.is_superuser and profile_user != user %}
+                            <div class="card bg-light mt-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-crown me-2 text-warning"></i>Monarch Actions
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rewardModal">
+                                            <i class="fas fa-gift me-2"></i>Reward XP
+                                        </button>
+                                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#punishModal">
+                                            <i class="fas fa-gavel me-2"></i>Subtract XP
+                                        </button>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-tag me-2"></i>Add Special Title
+                                            </button>
+                                            <ul class="dropdown-menu w-100">
+                                                <li><a class="dropdown-item" href="{% url 'add_extra_title' profile_user.id 'good_guy' %}">Add "Good Guy" title</a></li>
+                                                <li><a class="dropdown-item" href="{% url 'add_extra_title' profile_user.id 'cheater' %}">Add "Cheater" title</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-exchange-alt me-2"></i>Actions
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'direct_message_conversation' profile_user.username %}" class="btn btn-outline-primary">
+                        <i class="fas fa-comment me-2"></i>Send Message
+                    </a>
+                    
+                    {% if profile_user != user %}
+                        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#sendXPModal">
+                            <i class="fas fa-coins me-2"></i>Send XP
+                        </button>
+                    {% endif %}
+                    
+                    <a href="{% url 'leaderboard' %}" class="btn btn-outline-info">
+                        <i class="fas fa-trophy me-2"></i>View Leaderboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_superuser and profile_user != user %}
+    <!-- Reward XP Modal -->
+    <div class="modal fade" id="rewardModal" tabindex="-1" aria-labelledby="rewardModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="rewardModalLabel">Reward XP to {{ profile_user.username }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{% url 'make_transaction' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <input type="hidden" name="recipient" value="{{ profile_user.username }}">
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount (XP)</label>
+                            <input type="number" class="form-control" id="amount" name="amount" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Message (Optional)</label>
+                            <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-gift me-2"></i>Reward XP
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Punish XP Modal -->
+    <div class="modal fade" id="punishModal" tabindex="-1" aria-labelledby="punishModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="punishModalLabel">Subtract XP from {{ profile_user.username }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="#">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="punish_amount" class="form-label">Amount to Subtract (XP)</label>
+                            <input type="number" class="form-control" id="punish_amount" name="amount" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="punish_reason" class="form-label">Reason (will be shown to user)</label>
+                            <textarea class="form-control" id="punish_reason" name="reason" rows="2" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-gavel me-2"></i>Subtract XP
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if profile_user != user %}
+    <!-- Send XP Modal -->
+    <div class="modal fade" id="sendXPModal" tabindex="-1" aria-labelledby="sendXPModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="sendXPModalLabel">Send XP to {{ profile_user.username }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{% url 'make_transaction' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <div class="d-flex justify-content-between">
+                                <span>Your balance: {{ user.profile.total_xp }} XP</span>
+                            </div>
+                        </div>
+                        
+                        <input type="hidden" name="recipient" value="{{ profile_user.username }}">
+                        <div class="mb-3">
+                            <label for="xp_amount" class="form-label">Amount (XP)</label>
+                            <input type="number" class="form-control" id="xp_amount" name="amount" min="1" max="{{ user.profile.total_xp }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="xp_message" class="form-label">Message (Optional)</label>
+                            <textarea class="form-control" id="xp_message" name="description" rows="2"></textarea>
+                        </div>
+                        
+                        {% if user.profile.password %}
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Bank Password</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i>Send XP
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

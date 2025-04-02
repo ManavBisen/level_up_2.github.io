@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}My Purchases - Gamify{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">
+            <i class="fas fa-shopping-bag me-2"></i>My Purchases
+        </h3>
+        <a href="{% url 'shop' %}" class="btn btn-light btn-sm">
+            <i class="fas fa-store me-1"></i>Back to Shop
+        </a>
+    </div>
+    <div class="card-body">
+        {% if purchases %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Item</th>
+                            <th>Price Paid</th>
+                            <th>Purchase Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for purchase in purchases %}
+                            <tr>
+                                <td>{{ purchase.item.name }}</td>
+                                <td>{{ purchase.price_paid }} XP</td>
+                                <td>{{ purchase.purchased_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    {% if purchase.item.file %}
+                                        <a href="{% url 'download_purchased_item' purchase.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-download me-1"></i>Download
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No file</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-bag fa-4x text-muted mb-3"></i>
+                <h4>No purchases yet</h4>
+                <p>You haven't purchased any items from the shop yet.</p>
+                <a href="{% url 'shop' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-store me-2"></i>Browse Shop
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

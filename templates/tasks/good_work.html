@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Good Work Timer - Gamify{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-stopwatch me-2"></i>Good Work Timer
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-3 fa-2x"></i>
+                        <div>
+                            <p class="mb-0">Start the timer when you begin your focused work. You'll earn <strong>1 XP per minute</strong> of Good Work. Working for at least 40 minutes completes your daily Good Work task!</p>
+                        </div>
+                    </div>
+                </div>
+
+                {% if active_session %}
+                    <div class="text-center mb-4">
+                        <div class="display-4 fw-bold mb-3" id="timer">00:00:00</div>
+                        <p class="lead">Session started at: {{ active_session.start_time|date:"H:i:s" }}</p>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <form method="POST" action="{% url 'end_good_work' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-lg w-100">
+                                <i class="fas fa-stop-circle me-2"></i>End Session
+                            </button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="text-center mb-4">
+                        <div class="display-4 fw-bold text-muted mb-3">00:00:00</div>
+                        <p class="lead">Start a new Good Work session when you're ready to focus.</p>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <form method="POST" action="{% url 'start_good_work' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-play-circle me-2"></i>Start Session
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header bg-secondary text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Sessions
+                </h3>
+            </div>
+            <div class="card-body">
+                {% if recent_sessions %}
+                    <div class="list-group">
+                        {% for session in recent_sessions %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ session.duration_minutes }} minutes</h5>
+                                    <small>{{ session.end_time|date:"M d, Y" }}</small>
+                                </div>
+                                <p class="mb-1">
+                                    <span class="badge bg-success">+{{ session.xp_earned }} XP</span>
+                                </p>
+                                <small class="text-muted">
+                                    {{ session.start_time|date:"H:i" }} - {{ session.end_time|date:"H:i" }}
+                                </small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-hourglass-start fa-3x text-muted mb-3"></i>
+                        <p>No recent sessions. Start your first Good Work session now!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/timer.js"></script>
+<script>
+    $(document).ready(function() {
+        {% if active_session %}
+            // Initialize timer with session start time
+            const startTime = new Date("{{ active_session.start_time|date:'c' }}").getTime();
+            initializeTimer(startTime);
+        {% endif %}
+    });
+</script>
+{% endblock %}

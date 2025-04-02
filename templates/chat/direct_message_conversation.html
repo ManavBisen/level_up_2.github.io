@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Conversation with {{ contact.username }} - Gamify{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'direct_messages' %}" class="btn btn-light btn-sm me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="d-flex align-items-center">
+                <img src="{{ contact.profile.image.url }}" alt="{{ contact.username }}" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                <h3 class="mb-0">{{ contact.username }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="chat-container" style="height: 400px; overflow-y: auto; display: flex; flex-direction: column;">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message-container mb-3 {% if message.sender == user %}align-self-end{% else %}align-self-start{% endif %}">
+                        <div class="message-bubble {% if message.sender == user %}bg-primary text-white{% else %}bg-light{% endif %}" style="max-width: 75%; padding: 10px 15px; border-radius: 18px;">
+                            <div class="message-content">{{ message.content }}</div>
+                            
+                            {% if message.attachment %}
+                                <div class="message-attachment mt-2">
+                                    <a href="{{ message.attachment.url }}" class="btn btn-sm {% if message.sender == user %}btn-light{% else %}btn-primary{% endif %}" target="_blank">
+                                        <i class="fas fa-paperclip me-1"></i>Download Attachment
+                                    </a>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="message-timestamp mt-1">
+                                <small class="{% if message.sender == user %}text-white-50{% else %}text-muted{% endif %}">
+                                    {{ message.timestamp|date:"H:i" }}
+                                </small>
+                                
+                                {% if message.sender == user %}
+                                    <a href="{% url 'delete_direct_message' message.id %}" class="text-decoration-none ms-2 delete-message-link" data-message-id="{{ message.id }}">
+                                        <small class="text-white-50"><i class="fas fa-trash"></i></small>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5 m-auto">
+                    <i class="fas fa-comments fa-4x text-muted mb-3"></i>
+                    <h4>No messages yet</h4>
+                    <p>Start the conversation with {{ contact.username }}!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-footer">
+        <form method="POST" action="{% url 'send_direct_message' %}" enctype="multipart/form-data" class="message-form">
+            {% csrf_token %}
+            <input type="hidden" name="recipient" value="{{ contact.username }}">
+            
+            <div class="input-group">
+                <input type="text" class="form-control" name="content" placeholder="Type a message..." required>
+                <label class="input-group-text" for="attachment">
+                    <i class="fas fa-paperclip"></i>
+                </label>
+                <input type="file" class="form-control d-none" id="attachment" name="attachment">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Scroll to bottom of chat container
+        const chatContainer = $('.chat-container');
+        chatContainer.scrollTop(chatContainer[0].scrollHeight);
+        
+        // Confirm message deletion
+        $('.delete-message-link').click(function(e) {
+            if (!confirm('Are you sure you want to delete this message?')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Show filename when attachment is selected
+        $('#attachment').change(function() {
+            const fileName = $(this).val().split('\\').pop();
+            if (fileName) {
+                $(this).prev('label').html(`<i class="fas fa-file me-1"></i>${fileName}`);
+            } else {
+                $(this).prev('label').html(`<i class="fas fa-paperclip"></i>`);
+            }
+        });
+    });
+</script>
+{% endblock %}

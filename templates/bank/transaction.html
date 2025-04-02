@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Send XP - Gamify{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-paper-plane me-2"></i>Send XP
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-3 fa-2x"></i>
+                        <div>
+                            <p class="mb-0">You currently have <strong>{{ user.profile.total_xp }} XP</strong> available to send.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="recipient" class="form-label">Recipient Username</label>
+                        <input type="text" class="form-control" id="recipient" name="recipient" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount (XP)</label>
+                        <input type="number" class="form-control" id="amount" name="amount" min="1" max="{{ user.profile.total_xp }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Message (Optional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+                    
+                    {% if user.profile.password %}
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Bank Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="form-text">Enter your bank password to confirm this transaction.</div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="{% url 'bank' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i>Send XP
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

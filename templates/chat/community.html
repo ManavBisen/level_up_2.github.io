@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Community Chat - Gamify{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">
+            <i class="fas fa-users me-2"></i>Community Chat
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="chat-container" style="height: 500px; overflow-y: auto; display: flex; flex-direction: column;">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message-container mb-3">
+                        <div class="message-header d-flex align-items-center mb-2">
+                            <img src="{{ message.sender.profile.image.url }}" alt="{{ message.sender.username }}" class="rounded-circle me-2" style="width: 30px; height: 30px;">
+                            <div>
+                                <strong>{{ message.sender.username }}</strong>
+                                <span class="badge bg-info ms-2">{{ message.sender.profile.title.name }}</span>
+                                <small class="text-muted ms-2">{{ message.timestamp|date:"M d, Y H:i" }}</small>
+                                
+                                {% if message.sender == user or user.is_superuser %}
+                                    <a href="{% url 'delete_community_message' message.id %}" class="text-decoration-none ms-2 delete-message-link" data-message-id="{{ message.id }}">
+                                        <small class="text-muted"><i class="fas fa-trash"></i></small>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="message-bubble bg-light" style="width: 95%; padding: 10px 15px; border-radius: 18px;">
+                            <div class="message-content">{{ message.content }}</div>
+                            
+                            {% if message.attachment %}
+                                <div class="message-attachment mt-2">
+                                    <a href="{{ message.attachment.url }}" class="btn btn-sm btn-primary" target="_blank">
+                                        <i class="fas fa-paperclip me-1"></i>Download Attachment
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5 m-auto">
+                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                    <h4>No messages yet</h4>
+                    <p>Be the first to start the community conversation!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-footer">
+        <form method="POST" action="{% url 'send_community_message' %}" enctype="multipart/form-data" class="message-form">
+            {% csrf_token %}
+            
+            <div class="input-group">
+                <input type="text" class="form-control" name="content" placeholder="Type a message..." required>
+                <label class="input-group-text" for="attachment">
+                    <i class="fas fa-paperclip"></i>
+                </label>
+                <input type="file" class="form-control d-none" id="attachment" name="attachment">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Scroll to bottom of chat container
+        const chatContainer = $('.chat-container');
+        chatContainer.scrollTop(chatContainer[0].scrollHeight);
+        
+        // Confirm message deletion
+        $('.delete-message-link').click(function(e) {
+            if (!confirm('Are you sure you want to delete this message?')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Show filename when attachment is selected
+        $('#attachment').change(function() {
+            const fileName = $(this).val().split('\\').pop();
+            if (fileName) {
+                $(this).prev('label').html(`<i class="fas fa-file me-1"></i>${fileName}`);
+            } else {
+                $(this).prev('label').html(`<i class="fas fa-paperclip"></i>`);
+            }
+        });
+    });
+</script>
+{% endblock %}
