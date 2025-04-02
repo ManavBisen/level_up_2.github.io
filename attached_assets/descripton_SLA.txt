@@ -1,0 +1,34 @@
+App should have an average UI.
+Main goal of the app is to make the user engage in good work by gamifying his good work.
+The user first should be able register/login.
+In the homepage he should be able to see his profile photo, name, title, level, and total xp.
+Profile photo can be set by the user, it should be an image, he should be able to change his profile photo whenever he wants.
+His name will be the one his gave while registering, it should be unchangable.
+Whenever the user gains xp, at a time, he will level up and after few level ups, he can get a title. The user will start at level 0 and at that time, he will have title 'none', at level 1, he will get the title Beginner. At level 5, he will get the title Player, at level 10 he will get the title 'Bounty 1Thousand' at level 20 he will get the title 'Bounty 100Thousand'. And while keeping some distance in the levels add different titles as the users level ups. After level 20, next title will be given at level 35, than at 50. Than at 90, than at 100, than at 145, than at 150 than 200. Don't think about adding more, I will add whever I want.
+At first, the user will be required to gain 10xp to level up from 0 to 1, than 10+1 for level 1 and than 10+2 for level, just keep it like this. But when the user will come at level 50, his xp required to level will fix at 50+10=60 and  than the required xp to level up will be fixed at it.
+1xp could be gain by 1minute of 'GoodWork'. I can be counted using a timer, that the user can start and stop whever he wants to. 
+To level up bar will be shown below all the things I mentioned till now. It will show, how much xp is left to level up. When the reuired xp is completed, the bar will go down to count from zero for the next level up and the xp will go to total xp that I mentioned before as XP.
+In the Daily Tasks page, the user can see the daily tasks for him. By default, there will be three daily tasks. 1. Do 40minute Good Work, 2. Read 2page of a 'good book', 3. Do 50push ups and 50 squats. A timer will count the time for 40minutes good work, The user will tick the read 2page tasks, and the user will tick for the 50 push ups and 50squats tasks. 
+The user can tick on submit taks whever he wants. After submiiting tasks or if the whole day is completed, if no tasks are done, the user will be punished by subracting (10+level) xp, but this rule will start only after the user has reached a minimum of level 1. If after submiiting tasks or again if the day is gone and 1out of 3 tasks are done, than the user will neither be punised nor rewarded. If two out of 3 are done after submmiting or the whole day is done. 80xp will be rewarded. If 3out of 3 are done after submitting or the whole day is gone, the user will be rewared with (80+ level) xp.
+
+And now, there is the concept of superuser:
+The superuser will have a bit diffrent UI.
+While the quality of UI will be the same.
+He can set any profile photo as he wants and will have the name 'Monarch'. He don't need to do any 'tasks' or any 'good work' that normal userts have to do. He will have a page to search for any user on the app by his name. He can reward or punish the user with xp as he wants. He can give some extra tasks to do to any user or to every user and can set the amount of xp the users will recieve after doing the task or tasks. The normal users will be able to see any 'extra tasks' on their homepage if there are any given.
+The superuser can add or remove anything on the shop page that is a common shop to every user. He can upload pdf, images, or any files and set prices(in xp) and the amount there will be on the shop of it (because there should be a feeling among user that the stock can finish at any time so they will use their xp fast if they want to buy it). 
+There should also be a leaderboard that can be seen by boith superuser and normal users, the top 10 users can be seen there, the ranks are decided on the level of the user, the higher the level, the higher the rank.
+This process will be done by the app, but if the superuser thinks that someone has cheated or had some problem than there should be a option to the superuser to give an 'extra title' to any user of 'cheater' or 'good guy'.
+
+Now let's discuss some more about normal users:
+the users should have a Bank Page. Where they can see how much money(meaning xp here) they have. If they recieve money(xp) from someone, they should get the money(xp) and also get a notification to notify them about who send them that money(xp). If they want to send money to someone they should be able to use 'make a transaction' option from which they can make a transaction of money(xp) to anyone by searching his name and than entering the amount and that at last by using their password that they made while registering so that no one else can make transaction from their app. After that the person they sent it should recieve the amount and notification and the money(xp) will be used from how much they had.
+
+Now is something common for everyone:
+Users should be able to direct message anyone by searching and selecting the user in the DM page. The superuser should have this feature too. And than there should be a common a community page, where every user and also the superuser should be able to chat like a discord server is. They can send the files that they want or any text message.The users should be able to delete theuir message if they want. And if the superuser find something inappropirate than he should be able to delete anyone's message.
+
+Some things:
+don't forget that there can be multiple things on the shop page as the superuser upload and sets the price and the amount for it.
+There can't be people with the same name.
+
+
+
+And... That's all for now, I will add more things I I want to, don't worry about that.
