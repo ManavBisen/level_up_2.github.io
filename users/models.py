@@ -54,6 +54,7 @@ class Profile(models.Model):
         self.total_xp += amount
         
         # Check for level up
+        notifications_to_create = []
         while self.xp >= self.get_xp_for_next_level():
             self.xp -= self.get_xp_for_next_level()
             self.level += 1
@@ -61,13 +62,25 @@ class Profile(models.Model):
             # Update title based on level
             self._update_title()
             
-            # Create notification for level up
-            Notification.objects.create(
-                user=self.user,
-                message=f"Congratulations! You've reached level {self.level}!"
+            # Store notification to create (we'll batch create them later)
+            notifications_to_create.append(
+                Notification(
+                    user=self.user,
+                    message=f"Congratulations! You've reached level {self.level}!"
+                )
             )
         
-        self.save()
+        # Update the database directly without triggering signals again
+        Profile.objects.filter(pk=self.pk).update(
+            xp=self.xp,
+            total_xp=self.total_xp,
+            level=self.level,
+            title=self.title
+        )
+        
+        # Create the batched notifications
+        if notifications_to_create:
+            Notification.objects.bulk_create(notifications_to_create)
     
     def _update_title(self):
         """Update the user's title based on their level"""
@@ -100,6 +113,7 @@ class Profile(models.Model):
         self.total_xp -= amount
         
         # Check if we need to drop levels
+        notifications_to_create = []
         while self.xp < 0:
             if self.level <= 0:
                 # Can't go below level 0
@@ -111,13 +125,25 @@ class Profile(models.Model):
             self.xp += self.get_xp_for_next_level()
             self._update_title()
             
-            # Create notification for level drop
-            Notification.objects.create(
-                user=self.user,
-                message=f"Oh no! You've dropped to level {self.level}."
+            # Store notification to create
+            notifications_to_create.append(
+                Notification(
+                    user=self.user,
+                    message=f"Oh no! You've dropped to level {self.level}."
+                )
             )
         
-        self.save()
+        # Update the database directly without triggering signals again
+        Profile.objects.filter(pk=self.pk).update(
+            xp=self.xp,
+            total_xp=self.total_xp,
+            level=self.level,
+            title=self.title
+        )
+        
+        # Create the batched notifications
+        if notifications_to_create:
+            Notification.objects.bulk_create(notifications_to_create)
     
     def get_rank(self):
         """Get the user's rank based on total XP"""

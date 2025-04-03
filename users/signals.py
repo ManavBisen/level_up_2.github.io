@@ -17,9 +17,12 @@ def save_profile(sender, instance, **kwargs):
 @receiver(post_save, sender=Profile)
 def update_title_based_on_level(sender, instance, created, **kwargs):
     """Update user title when their profile is saved"""
-    if not created:  # Only run for existing profiles (not during creation)
+    if not created and not getattr(instance, '_updating_title', False):  # Only run for existing profiles and prevent recursion
+        instance._updating_title = True  # Flag to prevent recursion
         instance._update_title()
-        instance.save()
+        # Update the database directly without triggering signals again
+        Profile.objects.filter(pk=instance.pk).update(title=instance.title)
+        delattr(instance, '_updating_title')  # Clean up
 
 def create_default_level_titles():
     """Create default level titles if they don't exist"""
