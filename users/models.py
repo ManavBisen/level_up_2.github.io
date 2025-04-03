@@ -29,12 +29,17 @@ class Profile(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         
-        # Resize image if needed
-        img = Image.open(self.image.path)
-        if img.height > 300 or img.width > 300:
-            output_size = (300, 300)
-            img.thumbnail(output_size)
-            img.save(self.image.path)
+        # Resize image if it exists
+        try:
+            if self.image and os.path.exists(self.image.path):
+                img = Image.open(self.image.path)
+                if img.height > 300 or img.width > 300:
+                    output_size = (300, 300)
+                    img.thumbnail(output_size)
+                    img.save(self.image.path)
+        except (FileNotFoundError, ValueError, OSError):
+            # If the image file doesn't exist or has other issues, skip processing
+            pass
     
     def get_xp_for_next_level(self):
         # Calculate XP needed to level up (10 + level, max 60)
