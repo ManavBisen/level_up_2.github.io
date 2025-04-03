@@ -37,6 +37,17 @@ main {
     display: inline-block;
 }
 
+/* Tiny profile image for chat messages */
+.tiny-profile-img {
+    object-fit: cover;
+    border: 1px solid #ffffff;
+    box-shadow: 0 0.1rem 0.25rem rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: inline-block;
+}
+
 /* Card hover effects */
 .card {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
