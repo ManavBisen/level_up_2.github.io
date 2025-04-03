@@ -144,6 +144,18 @@ footer {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+/* Logout form styling */
+.logout-form {
+    background: transparent;
+}
+
+.logout-form button {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
     .profile-img {
