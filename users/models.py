@@ -85,11 +85,10 @@ class Profile(models.Model):
     def _update_title(self):
         """Update the user's title based on their level"""
         # Try to find a title for the current level
-        try:
-            level_title = LevelTitle.objects.filter(level__lte=self.level).order_by('-level').first()
-            if level_title:
-                self.title = level_title.title
-        except LevelTitle.DoesNotExist:
+        level_title = LevelTitle.objects.filter(level__lte=self.level).order_by('-level').first()
+        if level_title:
+            self.title = level_title.title
+        else:
             # If no title found, use default titles
             if self.level == 0:
                 self.title = 'None'

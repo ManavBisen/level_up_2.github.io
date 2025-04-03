@@ -7,3 +7,6 @@ class UsersConfig(AppConfig):
 
     def ready(self):
         import users.signals
+        # Create default level titles when the app starts
+        from users.signals import create_default_level_titles
+        create_default_level_titles()
