@@ -11,11 +11,19 @@ def message_file_path(instance, filename):
     # Return full path
     return os.path.join('message_attachments', filename)
 
+def audio_file_path(instance, filename):
+    """Generate file path for audio message attachments"""
+    # Audio files will always be .webm
+    filename = f'audio_{instance.id}.webm'
+    # Return full path
+    return os.path.join('audio_messages', filename)
+
 class DirectMessage(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
-    content = models.TextField()
+    content = models.TextField(blank=True)  # Allow blank for audio-only messages
     file = models.FileField(upload_to=message_file_path, null=True, blank=True)
+    audio = models.FileField(upload_to=audio_file_path, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
     
@@ -52,8 +60,9 @@ class DirectMessage(models.Model):
 
 class CommunityMessage(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_messages')
-    content = models.TextField()
+    content = models.TextField(blank=True)  # Allow blank for audio-only messages
     file = models.FileField(upload_to=message_file_path, null=True, blank=True)
+    audio = models.FileField(upload_to=audio_file_path, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:

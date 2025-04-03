@@ -78,6 +78,19 @@
                                             <p class="mb-1">{{ message.content }}</p>
                                         {% endif %}
                                         
+                                        {% if message.audio %}
+                                            <div class="audio-message mt-2">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <i class="fas fa-microphone text-danger me-2"></i>
+                                                    <span class="text-muted small">Voice Message</span>
+                                                </div>
+                                                <audio controls class="w-100">
+                                                    <source src="{{ message.audio.url }}" type="audio/webm">
+                                                    Your browser does not support the audio element.
+                                                </audio>
+                                            </div>
+                                        {% endif %}
+                                        
                                         {% if message.file %}
                                             <div class="mt-2">
                                                 <a href="{{ message.file.url }}" class="btn btn-sm btn-primary" target="_blank">
@@ -151,22 +164,75 @@
                     
                     <!-- Fixed message form at the bottom -->
                     <div class="message-form-container">
-                        <form method="POST" enctype="multipart/form-data" class="mb-0">
+                        <form method="POST" enctype="multipart/form-data" class="mb-0" id="messageForm">
                             {% csrf_token %}
                             <div class="row g-2 align-items-end">
                                 <div class="col">
                                     {{ form.content|as_crispy_field }}
+                                    <div style="display: none;">
+                                        {{ form.audio }}
+                                    </div>
                                 </div>
                                 <div class="col-auto">
-                                    <label for="id_file" class="btn btn-outline-primary mb-0" title="Add attachment">
-                                        <i class="fas fa-paperclip"></i>
-                                    </label>
-                                    <div style="display: none;">{{ form.file }}</div>
+                                    <div class="btn-group" role="group">
+                                        <!-- Voice Recording Button -->
+                                        <button type="button" class="btn btn-outline-danger mb-0 me-1" id="recordButton" title="Record Voice Message">
+                                            <i class="fas fa-microphone"></i>
+                                        </button>
+                                        
+                                        <!-- File Attachment Button -->
+                                        <label for="id_file" class="btn btn-outline-primary mb-0" title="Add attachment">
+                                            <i class="fas fa-paperclip"></i>
+                                        </label>
+                                        <div style="display: none;">{{ form.file }}</div>
+                                    </div>
                                 </div>
                                 <div class="col-auto">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-paper-plane"></i>
                                     </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Voice Recording Status -->
+                            <div id="recordingStatus" class="d-none mt-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="recording-indicator me-2">
+                                        <span class="badge bg-danger">Recording</span>
+                                        <span class="recording-time">00:00</span>
+                                    </div>
+                                    <div class="recording-controls">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="pauseResumeButton">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-success me-1" id="stopButton">
+                                            <i class="fas fa-stop"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="cancelButton">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Audio Preview After Recording -->
+                            <div id="audioPreview" class="d-none mt-2">
+                                <div class="card">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <i class="fas fa-headphones me-2"></i>
+                                                <span>Voice Message</span>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" id="discardAudio">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <audio controls class="w-100 mt-2" id="audioPlayback"></audio>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -190,6 +256,177 @@ document.getElementById('id_file').addEventListener('change', function() {
 document.addEventListener('DOMContentLoaded', function() {
     const messagesArea = document.querySelector('.messages-area');
     messagesArea.scrollTop = messagesArea.scrollHeight;
+    
+    // Initialize audio recording functionality
+    initAudioRecording();
 });
+
+// Audio Recording Functionality
+function initAudioRecording() {
+    // Get DOM elements
+    const recordButton = document.getElementById('recordButton');
+    const pauseResumeButton = document.getElementById('pauseResumeButton');
+    const stopButton = document.getElementById('stopButton');
+    const cancelButton = document.getElementById('cancelButton');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const audioPreview = document.getElementById('audioPreview');
+    const audioPlayback = document.getElementById('audioPlayback');
+    const discardAudio = document.getElementById('discardAudio');
+    const recordingTime = document.querySelector('.recording-time');
+    const progressBar = document.querySelector('.progress-bar');
+    const audioInput = document.getElementById('id_audio');
+    
+    // Recording variables
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioBlob;
+    let audioUrl;
+    let startTime;
+    let timerInterval;
+    let isPaused = false;
+    let MAX_RECORDING_TIME = 60; // Max recording time in seconds
+    
+    // Event listeners
+    recordButton.addEventListener('click', startRecording);
+    pauseResumeButton.addEventListener('click', togglePauseResume);
+    stopButton.addEventListener('click', stopRecording);
+    cancelButton.addEventListener('click', cancelRecording);
+    discardAudio.addEventListener('click', discardRecordedAudio);
+    
+    // Start recording function
+    function startRecording() {
+        // Request microphone access
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                // Show recording UI
+                recordingStatus.classList.remove('d-none');
+                recordButton.classList.add('d-none');
+                
+                // Reset recording state
+                audioChunks = [];
+                isPaused = false;
+                startTime = Date.now();
+                
+                // Update UI
+                pauseResumeButton.innerHTML = '<i class="fas fa-pause"></i>';
+                recordingTime.textContent = '00:00';
+                progressBar.style.width = '0%';
+                
+                // Start timer
+                startTimer();
+                
+                // Create MediaRecorder and start recording
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    // Stop all tracks in the stream to release the microphone
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // Create audio blob and URL
+                    audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Set audio source and show preview
+                    audioPlayback.src = audioUrl;
+                    audioPreview.classList.remove('d-none');
+                    recordingStatus.classList.add('d-none');
+                    recordButton.classList.remove('d-none');
+                    
+                    // Create a File object from the Blob
+                    const audioFile = new File([audioBlob], 'voice_message.webm', {
+                        type: 'audio/webm',
+                        lastModified: Date.now()
+                    });
+                    
+                    // Create a DataTransfer to create a FileList
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(audioFile);
+                    
+                    // Set the file to the input field
+                    audioInput.files = dataTransfer.files;
+                };
+                
+                // Start recording
+                mediaRecorder.start(100); // collect data every 100ms
+            })
+            .catch(error => {
+                console.error('Error accessing microphone:', error);
+                alert('Could not access your microphone. Please check permissions and try again.');
+            });
+    }
+    
+    // Timer function
+    function startTimer() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (!isPaused) {
+                const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+                const seconds = (elapsedTime % 60).toString().padStart(2, '0');
+                recordingTime.textContent = `${minutes}:${seconds}`;
+                
+                // Update progress bar
+                const progress = (elapsedTime / MAX_RECORDING_TIME) * 100;
+                progressBar.style.width = `${Math.min(progress, 100)}%`;
+                
+                // Auto-stop if max time reached
+                if (elapsedTime >= MAX_RECORDING_TIME) {
+                    stopRecording();
+                }
+            }
+        }, 1000);
+    }
+    
+    // Toggle pause/resume recording
+    function togglePauseResume() {
+        if (mediaRecorder) {
+            if (isPaused) {
+                // Resume recording
+                mediaRecorder.resume();
+                isPaused = false;
+                pauseResumeButton.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                // Pause recording
+                mediaRecorder.pause();
+                isPaused = true;
+                pauseResumeButton.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        }
+    }
+    
+    // Stop recording function
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            clearInterval(timerInterval);
+        }
+    }
+    
+    // Cancel recording function
+    function cancelRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            clearInterval(timerInterval);
+            recordingStatus.classList.add('d-none');
+            recordButton.classList.remove('d-none');
+            audioPreview.classList.add('d-none');
+        }
+    }
+    
+    // Discard recorded audio function
+    function discardRecordedAudio() {
+        audioPreview.classList.add('d-none');
+        audioBlob = null;
+        audioUrl = null;
+        audioInput.value = '';
+        if (audioPlayback.src) {
+            URL.revokeObjectURL(audioPlayback.src);
+            audioPlayback.src = '';
+        }
+    }
+}
 </script>
 {% endblock %}
