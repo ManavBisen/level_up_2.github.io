@@ -37,7 +37,7 @@
                                 <td class="align-middle">
                                     <div class="d-flex align-items-center">
                                         <img src="{{ profile.image.url }}" alt="{{ profile.user.username }}" 
-                                             class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                             class="small-profile-img me-2">
                                         <span class="fw-bold">{{ profile.user.username }}</span>
                                     </div>
                                 </td>
@@ -55,7 +55,7 @@
                     <div class="d-flex align-items-center">
                         <div class="me-3">
                             <img src="{{ user_profile.image.url }}" alt="{{ user.username }}" 
-                                 class="rounded-circle" style="width: 40px; height: 40px;">
+                                 class="small-profile-img">
                         </div>
                         <div>
                             <strong>Your Rank:</strong> #{{ user_rank }} with {{ user_profile.total_xp }} XP

@@ -16,10 +16,25 @@ main {
     border: 5px solid #ffffff;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
+    border-radius: 50%; /* Ensure image is perfectly circular */
+    width: 200px;
+    height: 200px;
+    display: inline-block;
 }
 
 .profile-img:hover {
     transform: scale(1.05);
+}
+
+/* Small profile image for thumbnails */
+.small-profile-img {
+    object-fit: cover;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: inline-block;
 }
 
 /* Card hover effects */
@@ -132,7 +147,8 @@ footer {
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
     .profile-img {
-        max-width: 120px;
+        width: 120px;
+        height: 120px;
     }
     
     .display-4 {

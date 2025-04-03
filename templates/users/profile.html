@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load math_filters %}
 {% block title %}Profile{% endblock %}
 
 {% block content %}
@@ -8,7 +9,7 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4 text-center">
-                        <img src="{{ profile.image.url }}" alt="{{ user.username }}'s profile picture" class="img-fluid rounded-circle profile-img mb-3" style="max-width: 200px;">
+                        <img src="{{ profile.image.url }}" alt="{{ user.username }}'s profile picture" class="img-fluid profile-img mb-3">
                         <h2>{{ user.username }}</h2>
                         <p class="text-muted">{{ user.email }}</p>
                         <div class="mb-3">
