@@ -2,6 +2,46 @@
 {% load crispy_forms_tags %}
 {% block title %}Community Chat{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* WhatsApp-like chat layout */
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 300px);
+        min-height: 400px;
+    }
+    
+    .messages-area {
+        flex-grow: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column-reverse; /* Messages flow upward */
+        padding: 1rem;
+    }
+    
+    .message-form-container {
+        position: sticky;
+        bottom: 0;
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-top: 1px solid #dee2e6;
+        z-index: 10;
+    }
+    
+    .message-bubble {
+        border-radius: 1rem;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        max-width: 80%;
+    }
+    
+    .message-header {
+        margin-bottom: 0.25rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-10">
@@ -9,39 +49,17 @@
             <div class="card-header bg-primary text-white">
                 <h3 class="mb-0"><i class="fas fa-users me-2"></i> Community Chat</h3>
             </div>
-            <div class="card-body">
-                <div class="mb-4">
-                    <form method="POST" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <div class="form-group mb-3">
-                            {{ form.content|as_crispy_field }}
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                {{ form.file|as_crispy_field }}
-                            </div>
-                            <div class="col-md-6 d-flex align-items-end">
-                                <div class="d-grid w-100">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-paper-plane me-2"></i> Post Message
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                
-                <hr>
-                
-                <div class="community-chat">
-                    {% if page_obj %}
-                        {% for message in page_obj %}
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <div class="d-flex justify-content-between align-items-center">
+            <div class="card-body p-0">
+                <div class="chat-container">
+                    <!-- Messages container (reversed order) -->
+                    <div class="messages-area">
+                        {% if page_obj %}
+                            {% for message in page_obj %}
+                                <div class="message-container">
+                                    <div class="message-header d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             <img src="{{ message.sender.profile.image.url }}" alt="{{ message.sender.username }}" 
-                                                 class="rounded-circle me-2" style="width: 30px; height: 30px;">
+                                                 class="small-profile-img me-2">
                                             <div>
                                                 <strong>{{ message.sender.username }}</strong>
                                                 <small class="text-muted">{{ message.timestamp|date:"M d, Y H:i" }}</small>
@@ -55,22 +73,21 @@
                                             </a>
                                         {% endif %}
                                     </div>
+                                    <div class="message-bubble bg-light">
+                                        {% if message.content %}
+                                            <p class="mb-1">{{ message.content }}</p>
+                                        {% endif %}
+                                        
+                                        {% if message.file %}
+                                            <div class="mt-2">
+                                                <a href="{{ message.file.url }}" class="btn btn-sm btn-primary" target="_blank">
+                                                    <i class="fas fa-download me-1"></i> Download
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <div class="card-body">
-                                    {% if message.content %}
-                                        <p class="card-text">{{ message.content }}</p>
-                                    {% endif %}
-                                    
-                                    {% if message.file %}
-                                        <div class="mt-2">
-                                            <a href="{{ message.file.url }}" class="btn btn-sm btn-primary" target="_blank">
-                                                <i class="fas fa-download me-1"></i> Download Attachment
-                                            </a>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endfor %}
+                            {% endfor %}
                         
                         <!-- Pagination -->
                         {% if page_obj.has_other_pages %}
@@ -130,9 +147,49 @@
                             <p class="text-muted">Be the first to post in the community chat!</p>
                         </div>
                     {% endif %}
+                    </div>
+                    
+                    <!-- Fixed message form at the bottom -->
+                    <div class="message-form-container">
+                        <form method="POST" enctype="multipart/form-data" class="mb-0">
+                            {% csrf_token %}
+                            <div class="row g-2 align-items-end">
+                                <div class="col">
+                                    {{ form.content|as_crispy_field }}
+                                </div>
+                                <div class="col-auto">
+                                    <label for="id_file" class="btn btn-outline-primary mb-0" title="Add attachment">
+                                        <i class="fas fa-paperclip"></i>
+                                    </label>
+                                    <div style="display: none;">{{ form.file }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// Show filename when file is selected
+document.getElementById('id_file').addEventListener('change', function() {
+    const fileName = this.files[0]?.name;
+    if (fileName) {
+        this.nextElementSibling.textContent = fileName;
+    }
+});
+
+// Scroll to bottom of messages on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const messagesArea = document.querySelector('.messages-area');
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+});
+</script>
 {% endblock %}
